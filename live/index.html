@@ -1112,9 +1112,18 @@
             return;
           }
 
+          // Match the page's protocol so an https page uses wss (a ws socket
+          // would be blocked as mixed content).
+          const proto = window.location.protocol === "https:" ? "wss" : "ws";
+
+          // A Host containing "/" is treated as a full "host[:port]/path"
+          // address (e.g. behind a reverse proxy) and used as-is, ignoring the
+          // Port field. Otherwise Host and Port are combined as "host:port".
           const host = this.socketHost;
           const port = this.socketPort;
-          const addr = `ws:\/\/${host}:${port}`;
+          const addr = host.includes("/")
+            ? `${proto}:\/\/${host}`
+            : `${proto}:\/\/${host}:${port}`;
 
           console.log(`trying to connect websocket to ${addr}`);
           this.glvSocket = new WebSocket(addr);
