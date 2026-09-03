@@ -852,8 +852,11 @@
     if (host === "127.0.0.1" || host === "glvis.org") {
       host = "localhost";
     }
-    const socketHost = window.location.pathname.startsWith("/glvis/")
-      ? `${window.location.host}/glvis-ws`
+    const socket = new URLSearchParams(window.location.search).get("socket");
+    const socketHost = socket
+      ? socket.startsWith("/")
+        ? `${window.location.host}${socket}`
+        : socket
       : host;
     console.log(`host = ${host}`);
 
@@ -1120,13 +1123,17 @@
           const proto = window.location.protocol === "https:" ? "wss" : "ws";
 
           // A Host containing "/" is treated as a full "host[:port]/path"
-          // address (e.g. behind a reverse proxy) and used as-is, ignoring the
-          // Port field. Otherwise Host and Port are combined as "host:port".
+          // address (e.g. behind a reverse proxy). A ws:// or wss:// URL is
+          // also used as-is, ignoring the Port field.
           const host = this.socketHost;
           const port = this.socketPort;
-          const addr = host.includes("/")
-            ? `${proto}:\/\/${host}`
-            : `${proto}:\/\/${host}:${port}`;
+          const hostUrl = new URL(`${proto}://${host}`);
+          const addr =
+            host.startsWith("ws://") || host.startsWith("wss://")
+              ? host
+              : host.includes("/") || hostUrl.port
+                ? `${proto}:\/\/${host}`
+                : `${proto}:\/\/${host}:${port}`;
 
           console.log(`trying to connect websocket to ${addr}`);
           this.glvSocket = new WebSocket(addr);
