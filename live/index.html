@@ -1080,6 +1080,10 @@
           await new Promise((r) => setTimeout(r, 50 + this.streamDelay * 10));
         });
 
+        if (socket) {
+          this.connectWebsocket();
+        }
+
         this.glvIsLoading = false;
       },
       watch: {
