@@ -1127,13 +1127,16 @@
           // also used as-is, ignoring the Port field.
           const host = this.socketHost;
           const port = this.socketPort;
-          const hostUrl = new URL(`${proto}://${host}`);
-          const addr =
-            host.startsWith("ws://") || host.startsWith("wss://")
-              ? host
-              : host.includes("/") || hostUrl.port
+          let addr;
+          if (host.startsWith("ws://") || host.startsWith("wss://")) {
+            addr = host;
+          } else {
+            const hostUrl = new URL(`${proto}://${host}`);
+            addr =
+              host.includes("/") || hostUrl.port
                 ? `${proto}:\/\/${host}`
                 : `${proto}:\/\/${host}:${port}`;
+          }
 
           console.log(`trying to connect websocket to ${addr}`);
           this.glvSocket = new WebSocket(addr);
