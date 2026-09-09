@@ -1122,10 +1122,6 @@
             return;
           }
 
-          // Match the page's protocol so an https page uses wss (a ws socket
-          // would be blocked as mixed content).
-          const proto = window.location.protocol === "https:" ? "wss" : "ws";
-
           // A Host containing "/" is treated as a full "host[:port]/path"
           // address (e.g. behind a reverse proxy). A ws:// or wss:// URL is
           // also used as-is, ignoring the Port field.
@@ -1135,7 +1131,16 @@
           if (host.startsWith("ws://") || host.startsWith("wss://")) {
             addr = host;
           } else {
-            const hostUrl = new URL(`${proto}://${host}`);
+            const hostUrl = new URL(`http://${host}`);
+            const isLoopback = ["localhost", "127.0.0.1"].includes(
+              hostUrl.hostname,
+            );
+            // HTTPS pages need WSS for remote endpoints, but browsers permit
+            // the established local ws://localhost:8080 workflow.
+            const proto =
+              window.location.protocol === "https:" && !isLoopback
+                ? "wss"
+                : "ws";
             addr =
               host.includes("/") || hostUrl.port
                 ? `${proto}:\/\/${host}`
