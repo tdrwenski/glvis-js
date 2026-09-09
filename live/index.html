@@ -214,16 +214,45 @@
                       <v-spacer></v-spacer>
                       <v-card-text>
                         <v-form ref="socketForm" lazy-validation>
+                          <v-radio-group
+                            v-model="socketConnectionMode"
+                            row
+                            hide-details
+                          >
+                            <v-radio
+                              label="Server address"
+                              value="address"
+                            ></v-radio>
+                            <v-radio
+                              label="WebSocket URL"
+                              value="url"
+                            ></v-radio>
+                          </v-radio-group>
                           <v-text-field
+                            v-if="socketConnectionMode === 'address'"
                             v-model="socketHost"
                             label="Host"
                             required
                           ></v-text-field>
                           <v-text-field
+                            v-if="socketConnectionMode === 'address'"
                             v-model="socketPort"
-                            label="Port"
+                            label="Port (optional)"
+                          ></v-text-field>
+                          <v-text-field
+                            v-if="socketConnectionMode === 'address'"
+                            v-model="socketPath"
+                            label="Path (optional)"
+                          ></v-text-field>
+                          <v-text-field
+                            v-if="socketConnectionMode === 'url'"
+                            v-model="socketUrl"
+                            label="WebSocket URL"
                             required
                           ></v-text-field>
+                          <div class="text-caption mb-2">
+                            {{ websocketAddress() }}
+                          </div>
                           <v-btn @click="connectWebsocket">
                             {{ connectWebsocketButtonLabel }}
                           </v-btn>
@@ -853,11 +882,11 @@
       host = "localhost";
     }
     const socket = new URLSearchParams(window.location.search).get("socket");
-    const socketHost = socket
-      ? socket.startsWith("/")
+    const socketHost =
+      socket && socket.startsWith("/")
         ? `${window.location.host}${socket}`
-        : socket
-      : host;
+        : host;
+    const socketUrl = socket && !socket.startsWith("/") ? socket : "";
     console.log(`host = ${host}`);
 
     const touch = matchMedia("(hover: none), (pointer: coarse)").matches;
@@ -873,8 +902,11 @@
         websocketDialogActive: false,
         logWindowActive: false,
         connectWebsocketButtonLabel: "Connect",
+        socketConnectionMode: socketUrl ? "url" : "address",
         socketHost: socketHost,
         socketPort: "8080",
+        socketPath: "/",
+        socketUrl: socketUrl,
         controlWindowActive: false,
         helpWindowActive: false,
         fullScreenMode: false,
@@ -1099,6 +1131,24 @@
         },
       },
       methods: {
+        websocketAddress: function () {
+          if (this.socketConnectionMode === "url") {
+            return this.socketUrl;
+          }
+
+          const isLoopback = ["localhost", "127.0.0.1"].includes(
+            this.socketHost,
+          );
+          const proto =
+            window.location.protocol === "https:" && !isLoopback ? "wss" : "ws";
+          const port = this.socketPort ? `:${this.socketPort}` : "";
+          const path = this.socketPath
+            ? this.socketPath.startsWith("/")
+              ? this.socketPath
+              : `/${this.socketPath}`
+            : "/";
+          return `${proto}://${this.socketHost}${port}${path}`;
+        },
         updateCanvasSize: function () {
           [w, h] = windowDim();
           this.glv.setSize(w, h);
@@ -1122,30 +1172,7 @@
             return;
           }
 
-          // A Host containing "/" is treated as a full "host[:port]/path"
-          // address (e.g. behind a reverse proxy). A ws:// or wss:// URL is
-          // also used as-is, ignoring the Port field.
-          const host = this.socketHost;
-          const port = this.socketPort;
-          let addr;
-          if (host.startsWith("ws://") || host.startsWith("wss://")) {
-            addr = host;
-          } else {
-            const hostUrl = new URL(`http://${host}`);
-            const isLoopback = ["localhost", "127.0.0.1"].includes(
-              hostUrl.hostname,
-            );
-            // HTTPS pages need WSS for remote endpoints, but browsers permit
-            // the established local ws://localhost:8080 workflow.
-            const proto =
-              window.location.protocol === "https:" && !isLoopback
-                ? "wss"
-                : "ws";
-            addr =
-              host.includes("/") || hostUrl.port
-                ? `${proto}:\/\/${host}`
-                : `${proto}:\/\/${host}:${port}`;
-          }
+          const addr = this.websocketAddress();
 
           console.log(`trying to connect websocket to ${addr}`);
           this.glvSocket = new WebSocket(addr);
