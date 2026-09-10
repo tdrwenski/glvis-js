@@ -882,10 +882,10 @@
       host = "localhost";
     }
     const socket = new URLSearchParams(window.location.search).get("socket");
-    const socketHost =
-      socket && socket.startsWith("/")
-        ? `${window.location.host}${socket}`
-        : host;
+    const socketIsPath = socket && socket.startsWith("/");
+    const socketHost = socketIsPath ? window.location.host : host;
+    const socketPort = socketIsPath ? "" : "8080";
+    const socketPath = socketIsPath ? socket : "/";
     const socketUrl = socket && !socket.startsWith("/") ? socket : "";
     console.log(`host = ${host}`);
 
@@ -904,8 +904,8 @@
         connectWebsocketButtonLabel: "Connect",
         socketConnectionMode: socketUrl ? "url" : "address",
         socketHost: socketHost,
-        socketPort: "8080",
-        socketPath: "/",
+        socketPort: socketPort,
+        socketPath: socketPath,
         socketUrl: socketUrl,
         controlWindowActive: false,
         helpWindowActive: false,
